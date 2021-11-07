@@ -9,5 +9,3 @@ cache
 artifacts
 
 *.config.js
-
-main/src/utils
