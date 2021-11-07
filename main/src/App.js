@@ -6,6 +6,7 @@ import Arena from './Components/Arena';
 import { ethers } from 'ethers';
 import Nelson from './utils/Nelson.json';
 import { CONTRACT_ADDRESS, transformCharacterData } from './constants';
+import LoadingIndicator from './Components/LoadingIndicator';
 
 // Constants
 const TWITTER_HANDLE = '_buildspace';
@@ -14,10 +15,13 @@ const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
 const App = () => {
   // State
   const [currentAccount, setCurrentAccount] = useState(null);
-
   const [characterNFT, setCharacterNFT] = useState(null);
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   const renderContent = () => {
+    if (isLoading) {
+      return <LoadingIndicator />;
+    }
 
     if (!currentAccount) {
       return (
@@ -35,7 +39,7 @@ const App = () => {
         </div>
       );
     } else if (currentAccount && !characterNFT) {
-      return <SelectCharacter setCharacterNFT={setCharacterNFT} />;	
+      return <SelectCharacter setCharacterNFT={setCharacterNFT} />;
     } else if (currentAccount && characterNFT) {
       return <Arena characterNFT={characterNFT} setCharacterNFT={setCharacterNFT} />;
     }
@@ -48,6 +52,7 @@ const App = () => {
 
       if (!ethereum) {
         console.log('Make sure you have MetaMask!');
+        setIsLoading(false);
         return;
       } else {
         console.log('We have the ethereum object', ethereum);
@@ -65,6 +70,7 @@ const App = () => {
     } catch (error) {
       console.log(error);
     }
+    setIsLoading(false);
   };
 
   const connectWalletAction = async () => {
@@ -85,37 +91,41 @@ const App = () => {
       console.log(error);
     }
   };
+  useEffect(() => {
+    setIsLoading(true);
+    checkIfWalletIsConnected();
+  }, []);
 
   useEffect(() => {
     checkIfWalletIsConnected();
   }, []);
 
-useEffect(() => {
-  const fetchNFTMetadata = async () => {
-    console.log('Checking for Character NFT on address:', currentAccount);
+  useEffect(() => {
+    const fetchNFTMetadata = async () => {
+      console.log('Checking for Character NFT on address:', currentAccount);
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-    const gameContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      Nelson.abi,
-      signer
-    );
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const gameContract = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        Nelson.abi,
+        signer
+      );
 
-    const txn = await gameContract.checkIfUserHasNFT();
-    if (txn.name) {
-      console.log('User has character NFT');
-      setCharacterNFT(transformCharacterData(txn));
-    } else {
-      console.log('No character NFT found');
+      const characterNFT = await gameContract.checkIfUserHasNFT();
+      if (characterNFT.name) {
+        console.log('User has character NFT');
+        setCharacterNFT(transformCharacterData(characterNFT));
+      }
+
+      setIsLoading(false);
+    };
+
+    if (currentAccount) {
+      console.log('CurrentAccount:', currentAccount);
+      fetchNFTMetadata();
     }
-  };
-
-  if (currentAccount) {
-    console.log('CurrentAccount:', currentAccount);
-    fetchNFTMetadata();
-  }
-}, [currentAccount]);
+  }, [currentAccount]);
 
 
   return (
@@ -124,7 +134,7 @@ useEffect(() => {
         <div className="header-container">
           <p className="header gradient-text">Nelson the bully 👊🏼</p>
           <p className="sub-text">Team up to protect the Metaverse!</p>
-            {renderContent()}
+          {renderContent()}
         </div>
         <div className="footer-container">
           <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />

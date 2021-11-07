@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, transformCharacterData } from '../../constants';
 import myEpicGame from '../../utils/Nelson.json';
+import LoadingIndicator from '../LoadingIndicator';
 import './Arena.css';
 
 const Arena = ({ characterNFT, setCharacterNFT }) => {
@@ -9,6 +10,7 @@ const Arena = ({ characterNFT, setCharacterNFT }) => {
     const [gameContract, setGameContract] = useState(null);
     const [boss, setBoss] = useState(null);
     const [attackState, setAttackState] = useState('');
+    const [showToast, setShowToast] = useState(false);
 
     // UseEffects
     useEffect(() => {
@@ -69,10 +71,14 @@ const Arena = ({ characterNFT, setCharacterNFT }) => {
             if (gameContract) {
                 setAttackState('attacking');
                 console.log('Attacking boss...');
-                const attackTxn = await gameContract.attackBoss();
-                await attackTxn.wait();
-                console.log('attackTxn:', attackTxn);
+                const txn = await gameContract.attackBoss();
+                await txn.wait();
+                console.log(txn);
                 setAttackState('hit');
+                setShowToast(true);
+                setTimeout(() => {
+                    setShowToast(false);
+                }, 5000);
             }
         } catch (error) {
             console.error('Error attacking boss:', error);
@@ -82,9 +88,16 @@ const Arena = ({ characterNFT, setCharacterNFT }) => {
 
     return (
         <div className="arena-container">
+            {boss && characterNFT && (
+                <div id="toast" className={showToast ? 'show' : ''}>
+                    <div id="desc">{`💥 ${boss.name} was hit for ${characterNFT.attackDamage}!`}</div>
+                </div>
+            )}
+
+            {/* Boss */}
             {boss && (
                 <div className="boss-container">
-                    <div className={`boss-content ${attackState}`}>
+                    <div className={`boss-content  ${attackState}`}>
                         <h2>🔥 {boss.name} 🔥</h2>
                         <div className="image-content">
                             <img src={boss.imageURI} alt={`Boss ${boss.name}`} />
@@ -99,9 +112,16 @@ const Arena = ({ characterNFT, setCharacterNFT }) => {
                             {`💥 Attack ${boss.name}`}
                         </button>
                     </div>
+                    {attackState === 'attacking' && (
+                        <div className="loading-indicator">
+                            <LoadingIndicator />
+                            <p>Attacking ⚔️</p>
+                        </div>
+                    )}
                 </div>
             )}
 
+            {/* Character NFT */}
             {characterNFT && (
                 <div className="players-container">
                     <div className="player-container">
@@ -123,6 +143,10 @@ const Arena = ({ characterNFT, setCharacterNFT }) => {
                             </div>
                         </div>
                     </div>
+                    {/* <div className="active-players">
+                <h2>Active Players</h2>
+                <div className="players-list">{renderActivePlayersList()}</div>
+              </div> */}
                 </div>
             )}
         </div>
